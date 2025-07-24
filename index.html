@@ -1,31 +1,139 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer=""></script>
-<!--BEGIN QUALTRICS WEBSITE FEEDBACK SNIPPET-->
 
-<script type='text/javascript'>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Timer with Qualtrics Intercept</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #survey-iframe { 
+            width: 100%; 
+            height: 500px; 
+            border: 1px solid #ccc; 
+        }
+        #timer-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f0f0f0;
+            padding: 20px;
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 9999999999999999999;
+            display: none;
+            width: 300px;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000000002;
+            display: none;
+        }
+    </style>
+</head>
 
-(function(){var g=function(g){
+<body>
+    <h1>Main Website</h1>
+    <p>This page contains a survey in an iframe and a timer popup that may interrupt.</p>
+    
+    <iframe id="survey-iframe" src="https://zn9bwreamgwdwatnf-wellsfargocxsandbox.siteintercept.qualtrics.com/SIE/?Q_ZID=ZN_9BwReAmgWdWatNf" title="Survey Form"></iframe>
+    
+    <div class="overlay" id="overlay"></div>
+    <div id="timer-popup">
+        <h2>Important Notice!</h2>
+        <p>Your session is about to expire. Would you like to extend your session?</p>
+        <button id="continue-survey">Continue Survey</button>
+    </div>
+    
+    <button id="trigger-popup">Simulate Timed Popup</button>
 
-this.go=function(){var a=document.createElement("script");a.type="text/javascript";a.src=g;document.body&&document.body.appendChild(a)};
+    <script>
+        const overlay = document.getElementById('overlay');
+        const popup = document.getElementById('timer-popup');
+        const continueBtn = document.getElementById('continue-survey');
+        
+        let timer;
+        const SESSION_TIME = 15000; // 1 minute
+        let popupOpen = false;
 
-this.start=function(){var t=this;"complete"!==document.readyState?window.addEventListener?window.addEventListener("load",function(){t.go()},!1):window.attachEvent&&window.attachEvent("onload",function(){t.go()}):t.go()};};
+        function startSessionTimer() {
+            timer = setTimeout(showPopup, SESSION_TIME);
+        }
 
-try{(new g("https://zn9bwreamgwdwatnf-wellsfargocxsandbox.siteintercept.qualtrics.com/SIE/?Q_ZID=ZN_9BwReAmgWdWatNf")).start()}catch(i){}})();
+        function showPopup() {
+            if (!popupOpen) {
+                popupOpen = true;
+                overlay.style.display = 'block';
+                popup.style.display = 'block';
+                
+                // Focus on the Continue Survey button
+                continueBtn.focus();
+            }
+        }
 
-</script><div id='ZN_9BwReAmgWdWatNf'><!--DO NOT REMOVE-CONTENTS PLACED HERE--></div>
+        function resetTimer() {
+            clearTimeout(timer);
+            startSessionTimer(); // Restart the session timer
+        }
 
-<!--END WEBSITE FEEDBACK SNIPPET-->
+        function closePopup() {
+            overlay.style.display = 'none';
+            popup.style.display = 'none';
+            popupOpen = false;
+        }
 
-    <title>Homepage</title>
-  </head>
-  <body>
-    <h1>Welcome to the Homepage!</h1>
-    <p>This is the homepage of our simple website.</p>
-    <a href="exit.html" id="exit-link">Go to Exit Page</a>
-    <a href="mayortest.html" id="mayortest-link">Go to another Page</a>
-  </body>
+        function extendSession() {
+            // Unload the Qualtrics intercept
+            if (typeof QSI !== 'undefined' && QSI.API) {
+                QSI.API.unload(); // Unload current intercept
+                QSI.API.load(); // Reload the intercept
+            }
+            closePopup();
+            resetTimer(); // Reset the timer when extending session
+        }
+
+        // Event listeners for buttons
+        continueBtn.addEventListener('click', extendSession);
+        document.getElementById('trigger-popup').addEventListener('click', showPopup);
+
+        // Start the session timer when the page loads
+        window.onload = function() {
+            startSessionTimer();
+        };
+    </script>
+
+    <!-- Qualtrics Website Feedback Snippet -->
+    <script type='text/javascript'>
+        (function(){
+            var g=function(g){
+                this.go=function(){
+                    var a=document.createElement("script");
+                    a.type="text/javascript";
+                    a.src=g; 
+                    document.body&&document.body.appendChild(a)
+                };
+                this.start=function(){
+                    var t=this;
+                    "complete"!==document.readyState?
+                    window.addEventListener?window.addEventListener("load",function(){t.go()},!1):
+                    window.attachEvent&&window.attachEvent("onload",function(){t.go()}):t.go()
+                };
+            };
+            try{
+                // Qualtrics intercept script with your Q_ZID placeholder
+                (new g("https://zn9bwreamgwdwatnf-wellsfargocxsandbox.siteintercept.qualtrics.com/SIE/?Q_ZID=ZN_9BwReAmgWdWatNf")).start();
+            } catch(i){
+                console.error("Qualtrics intercept loading error: ", i);
+            }
+        })();
+    </script>
+    <div id='ZN_9BwReAmgWdWatNf'><!--DO NOT REMOVE-CONTENTS PLACED HERE--></div>
+</body>
+
 </html>
