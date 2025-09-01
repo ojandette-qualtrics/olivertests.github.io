@@ -1,4 +1,4 @@
-const iframe = document.querySelector('.QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_embedded-target-container > iframe')
+const iframe = document.querySelector('iframe[name="survey-iframe-SI_8Jna9K5PTcSmf3w"]');
 
 const originalStates = new Map();
 
