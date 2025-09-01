@@ -133,20 +133,31 @@
             }
         })();
 //ADA fixes test
-        document.addEventListener('DOMContentLoaded', function() {
-    const iframe = document.querySelector('iframe[name="survey-iframe-SI_8Jna9K5PTcSmf3w"]');
+      document.addEventListener('DOMContentLoaded', function() {
+    // Assume the selected div $0 is the container that toggles display
+    const containerDiv = document.querySelector('.QSIWebResponsive');
 
-    // Add a check to ensure the iframe was found
+    // Ensure the containerDiv is available (it should be, but for robustness)
+    if (!containerDiv) {
+        console.error("Selected container div is not available.");
+        return; // Stop execution if the container div is not found
+    }
+
+    // The iframe should be a descendant of the container div
+    const iframe = containerDiv.querySelector('iframe[name="survey-iframe-SI_8Jna9K5PTcSmf3w"]');
+
+    // Add a check to ensure the iframe was found within the container
     if (!iframe) {
-        console.error("Iframe with name 'survey-iframe-SI_8Jna9K5PTcSmf3w' not found.");
+        console.error("Iframe with name 'survey-iframe-SI_8Jna9K5PTcSmf3w' not found within the container div.");
         return; // Stop execution if iframe is not found
     }
 
     const originalStates = new Map();
 
     const applyRestrictions = () => {
+      // Hide all direct children of body *except* the container div and its descendants
       const elementsToHide = Array.from(document.querySelectorAll('body > *'))
-        .filter(element => element !== iframe && !iframe.contains(element));
+        .filter(element => element !== containerDiv && !containerDiv.contains(element));
 
       elementsToHide.forEach(element => {
         originalStates.set(element, {
@@ -157,7 +168,7 @@
         element.setAttribute('tabindex', '-1');
       });
       window.__originalAccessibilityStates = originalStates;
-      console.log('Restrictions applied.'); // Add logging to confirm execution
+      console.log('Restrictions applied to elements outside the container.'); // Add logging to confirm execution
     };
 
     const removeRestrictions = () => {
@@ -183,61 +194,47 @@
           }
         });
         delete window.__originalAccessibilityStates; // Clean up the stored states
-        console.log('Restrictions removed.'); // Add logging to confirm execution
+        console.log('Restrictions removed from elements outside the container.'); // Add logging to confirm execution
       }
     };
 
+    // We now observe the containerDiv for style changes
     const observer = new MutationObserver((mutationsList, observer) => {
       for (const mutation of mutationsList) {
-        // Check for style changes on the iframe to detect visibility
-        if (mutation.target === iframe && mutation.type === 'attributes' && mutation.attributeName === 'style') {
-          const display = window.getComputedStyle(iframe).display;
-          const visibility = window.getComputedStyle(iframe).visibility;
+        // Check for style changes on the containerDiv to detect visibility
+        if (mutation.target === containerDiv && mutation.type === 'attributes' && mutation.attributeName === 'style') {
+          const display = window.getComputedStyle(containerDiv).display;
+          const visibility = window.getComputedStyle(containerDiv).visibility;
 
           if (display !== 'none' && visibility !== 'hidden') {
-            // Iframe is now visible, apply restrictions
+            // Container div (and thus iframe) is now visible, apply restrictions
+            console.log('Container div is visible. Applying restrictions.');
             applyRestrictions();
           } else {
-            // Iframe is hidden, remove restrictions (if they were applied)
+            // Container div is hidden, remove restrictions (if they were applied)
+            console.log('Container div is hidden. Removing restrictions.');
             removeRestrictions();
           }
-        }
-
-        // Check for removal of the iframe from its parent to detect closure
-        if (mutation.type === 'childList') {
-          mutation.removedNodes.forEach(removedNode => {
-            if (removedNode === iframe) {
-              // The iframe was removed, execute cleanup
-              removeRestrictions();
-              observer.disconnect(); // Stop observing once the iframe is removed
-              console.log('Iframe removed, observer disconnected.'); // Add logging
-            }
-          });
         }
       }
     });
 
-    // Start observing the iframe's style attribute and its parent's child list
-    if (iframe.parentElement) {
-      observer.observe(iframe, { attributes: true, attributeFilter: ['style'] });
-      observer.observe(iframe.parentElement, { childList: true });
-      console.log('MutationObserver started observing iframe and parent.'); // Add logging
-    } else {
-      console.error("Iframe does not have a parentElement, cannot attach observer to parent.");
-    }
+    // Start observing the containerDiv's style attribute
+    // We no longer need to observe the parent's childList if the container toggles display
+    observer.observe(containerDiv, { attributes: true, attributeFilter: ['style'] });
+    console.log('MutationObserver started observing container div style.'); // Add logging
 
-
-    // Initial check in case the iframe is already visible on load
-    const initialDisplay = window.getComputedStyle(iframe).display;
-    const initialVisibility = window.getComputedStyle(iframe).visibility;
+    // Initial check in case the container div is already visible on load
+    const initialDisplay = window.getComputedStyle(containerDiv).display;
+    const initialVisibility = window.getComputedStyle(containerDiv).visibility;
     if (initialDisplay !== 'none' && initialVisibility !== 'hidden') {
+      console.log('Container div initially visible. Applying restrictions on load.');
       applyRestrictions();
     } else {
-      console.log('Iframe not initially visible, restrictions not applied on load.'); // Add logging
+      console.log('Container div not initially visible, restrictions not applied on load.'); // Add logging
     }
 
 }); // End of DOMContentLoaded listener
-
 
     </script>
     <div id='ZN_9BwReAmgWdWatNf'><!--DO NOT REMOVE-CONTENTS PLACED HERE--></div>
