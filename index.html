@@ -132,6 +132,120 @@
                 console.error("Qualtrics intercept loading error: ", i);
             }
         })();
+//ADA focus changes code test
+        (function() { 
+    
+    // Change this selector to match the intercept iframe on your page 
+    const iframeSelector = '.QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_content.QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_content-medium.QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_border-radius-slightly-rounded.QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_drop-shadow-light';
+    const iframe = document.querySelector(iframeSelector); if (!iframe) return;
+
+const modified = new Map(); 
+
+function isVisible(el) { try { return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length); } catch (e) { return false; } }
+
+function saveAndHideTopLevelSiblings() { if (isHidden) return; previousActiveElement = document.activeElement;
+
+
+const bodyChildren = Array.from(document.body.children);
+bodyChildren.forEach(child => {
+  // skip the iframe element itself and any ancestor that contains the iframe
+  if (child === iframe || child.contains(iframe)) return;
+
+  if (!modified.has(child)) {
+    modified.set(child, {
+      ariaHidden: child.getAttribute('aria-hidden'),
+      inert: 'inert' in child ? child.inert : undefined,
+      focusables: []
+    });
+  }
+
+  // set aria-hidden
+  child.setAttribute('aria-hidden', 'true');
+
+  // try inert first
+  if ('inert' in child) {
+    child.inert = true;
+  } else {
+    // fallback: make focusable descendants unfocusable
+    const focusableSelector = 'a, button, input, textarea, select, [tabindex]';
+    const focusables = Array.from(child.querySelectorAll(focusableSelector));
+    focusables.forEach(node => {
+      // store prior tabindex
+      const prevTab = node.getAttribute('tabindex');
+      modified.get(child).focusables.push({ node, prevTab });
+      try {
+        node.setAttribute('tabindex', '-1');
+      } catch (e) {}
+    });
+  }
+});
+
+// Focus the iframe element itself. If same-origin and accessible, try to focus an element inside after load.
+try {
+  iframe.focus();
+} catch (e) {
+  // ignore
+}
+
+isHidden = true;
+}
+
+function restoreTopLevelSiblings() { if (!isHidden) return; 
+    modified.forEach((data, el) => {
+    //restore aria-hidden 
+    if (data.ariaHidden === null) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', data.ariaHidden);
+
+
+  // restore inert
+  if (typeof data.inert !== 'undefined' && 'inert' in el) {
+    el.inert = data.inert;
+  }
+
+  // restore tabindex on focusable descendants if we changed them
+  if (data.focusables && data.focusables.length) {
+    data.focusables.forEach(item => {
+      if (item.prevTab === null) item.node.removeAttribute('tabindex');
+      else item.node.setAttribute('tabindex', item.prevTab);
+    });
+  }
+});
+modified.clear();
+
+// restore focus
+try {
+  if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+    previousActiveElement.focus();
+  }
+} catch (e) {}
+isHidden = false;
+}
+
+// Observe attributes (style/class) and childList of the iframe's parent or the iframe itself 
+// // We need to detect when the iframe becomes visible/hidden, or is removed from DOM.  const parent = iframe.parentElement || document.body; 
+
+const obs = new MutationObserver(mutations => { 
+    // If iframe is removed from the DOM, restore and disconnect 
+    if (!document.body.contains(iframe)) { restoreTopLevelSiblings(); obs.disconnect(); return; }
+
+
+// Check visibility heuristics
+const visible = isVisible(iframe);
+if (visible) saveAndHideTopLevelSiblings();
+else restoreTopLevelSiblings();
+
+// Also check for attribute changes that might make the iframe visible (style/class)
+for (const m of mutations) {
+  if (m.type === 'attributes' && (m.attributeName === 'style' || m.attributeName === 'class')) {
+    const nowVisible = isVisible(iframe);
+    if (nowVisible) saveAndHideTopLevelSiblings();
+    else restoreTopLevelSiblings();
+  }
+}
+});
+
+// Clean up on unload 
+window.addEventListener('unload', () => {restoreTopLevelSiblings(); }); })();
+        
     </script>
     <div id='ZN_9BwReAmgWdWatNf'><!--DO NOT REMOVE-CONTENTS PLACED HERE--></div>
 </body>
