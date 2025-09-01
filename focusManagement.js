@@ -3,7 +3,7 @@ const iframe = document.querySelector('iframe[name="survey-iframe-SI_8Jna9K5PTcS
 const originalStates = new Map();
 
 const applyRestrictions = () => {
-  const elementsToHide = Array.from(document.querySelectorAll('body *'))
+  const elementsToHide = Array.from(document.querySelectorAll('body > *'))
     .filter(element => element !== iframe && !iframe.contains(element));
 
   elementsToHide.forEach(element => {
