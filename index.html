@@ -136,17 +136,55 @@
     'use strict';
     
     let modalOpen = false;
+    let inertElements = [];
     
     function setInert() {
-        document.body.setAttribute('inert', '');
+        // Define specific selectors for your main content areas
+        const contentSelectors = [
+            'header',
+            'nav', 
+            'main',
+            '.main-content',
+            '#content',
+            'footer',
+            '.sidebar',
+            // Add your specific content selectors here
+        ];
+        
+        // Also get elements by common patterns, but exclude QSI
+        const allElements = document.querySelectorAll('body > *:not([class*="QSI"]):not([id*="QSI"])');
+        
+        // Apply inert to matching elements
+        contentSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                // Double-check it's not QSI related
+                if (!element.className.includes('QSI') && !element.id?.includes('QSI')) {
+                    element.setAttribute('inert', '');
+                    inertElements.push(element);
+                }
+            });
+        });
+        
+        // Apply to direct body children that aren't QSI
+        allElements.forEach(element => {
+            if (!inertElements.includes(element)) {
+                element.setAttribute('inert', '');
+                inertElements.push(element);
+            }
+        });
+        
         modalOpen = true;
-        console.log('Page set to inert');
+        console.log('Specific content areas set to inert');
     }
     
     function removeInert() {
-        document.body.removeAttribute('inert');
+        inertElements.forEach(element => {
+            element.removeAttribute('inert');
+        });
+        inertElements = [];
         modalOpen = false;
-        console.log('Page inert removed');
+        console.log('Inert removed from content areas');
     }
     
     // Watch for feedback button clicks
