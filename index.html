@@ -132,248 +132,62 @@
         })();
         
 //ADA fixes test
+ (function() {
+    'use strict';
+    
+    let modalOpen = false;
+    
+    function setInert() {
+        document.body.setAttribute('inert', '');
+        modalOpen = true;
+        console.log('Page set to inert');
+    }
+    
+    function removeInert() {
+        document.body.removeAttribute('inert');
+        modalOpen = false;
+        console.log('Page inert removed');
+    }
+    
+    // Watch for feedback button clicks
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('#QSIFeedbackButton-btn')) {
+            setTimeout(setInert, 100);
+        }
         
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded fired.');
-
-    // Select the trigger button
-    const triggerButton = document.querySelector('button#QSIFeedbackButton-btn');
-    if (!triggerButton) {
-        console.error("Trigger button with selector 'button#QSIFeedbackButton-btn' not found.");
-        // Continue, as the observer might still be needed if the container is shown by other means
-    } else {
-        console.log('Trigger button found:', triggerButton);
-        // Add a click listener to the button
-        triggerButton.addEventListener('click', function() {
-            console.log('Trigger button clicked! Expecting container visibility change.');
-            // Note: The actual display logic for the container is handled elsewhere,
-            // likely by the code that adds this button to the DOM or handles its click.
-            // The MutationObserver below will react when the container's display *actually* changes.
-        });
-    }
-
-
-    const containerDiv = document.querySelector('.QSIWebResponsive');
-
-    if (!containerDiv) {
-        console.error("Container div with selector '.QSIWebResponsive' not found.");
-        return; // Cannot proceed without the container
-    }
-    console.log('Container div found:', containerDiv);
-
-    // Assuming the iframe is a descendant of the container div
-    const iframe = containerDiv.querySelector('iframe[name="survey-iframe-SI_8Jna9K5PTcSmf3w"]');
-
-    if (!iframe) {
-        console.error("Iframe with name 'survey-iframe-SI_8Jna9K5PTcSmf3w' not found within the container div.");
-        // Continue execution even if iframe is not found, maybe the container itself is enough
-        // return; // Removed return to allow observer to start even if iframe isn't there yet
-    }
-    console.log('Iframe found:', iframe || 'Not found within container yet.');
-
-
-    const originalStates = new Map();
-
-    const applyRestrictions = () => {
-      console.log('applyRestrictions called.');
-      // Hide all direct children of body *except* the container div and its descendants
-      const elementsToHide = Array.from(document.querySelectorAll('body > *'))
-        .filter(element => element !== containerDiv && !containerDiv.contains(element));
-      console.log('Elements to hide:', elementsToHide.length, elementsToHide);
-
-      elementsToHide.forEach(element => {
-        // Check if the element is a script or style tag and skip if desired
-        if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE' || element.tagName === 'LINK') {
-           console.log('Skipping script/style/link element:', element.tagName);
-           return; // Skip to the next element
+        // Watch for close button clicks
+        if (event.target.closest('.QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_close-btn')) {
+            removeInert();
         }
-
-        // Only store if not already hidden or tabindex -1 by something else
-        // Check current computed style as well, not just attributes
-        const computed = window.getComputedStyle(element);
-        const isCurrentlyHiddenByStyle = computed.display === 'none' || computed.visibility === 'hidden' || computed.opacity === '0';
-
-        if (element.getAttribute('aria-hidden') !== 'true' || element.getAttribute('tabindex') !== '-1' || !isCurrentlyHiddenByStyle) {
-            // Store only if the element is not already in the map to avoid overwriting initial states
-            if (!originalStates.has(element)) {
-                 originalStates.set(element, {
-                    ariaHidden: element.getAttribute('aria-hidden'),
-                    tabindex: element.getAttribute('tabindex'),
-                    originalDisplay: element.style.display, // Store inline styles if any
-                    originalVisibility: element.style.visibility, // Store inline styles if any
-                    originalOpacity: element.style.opacity // Store inline styles if any
-                });
-                 console.log('Storing original state for element:', element, originalStates.get(element));
-            }
-
-
-            // Apply restrictions using inline styles or attributes
-            element.setAttribute('aria-hidden', 'true');
-            element.setAttribute('tabindex', '-1');
-            // Using inline styles can sometimes override external CSS more reliably for hiding
-            // element.style.display = 'none'; // Alternative hiding method - be cautious if element needs layout space
-            // element.style.visibility = 'hidden'; // Hides but keeps layout space
-            // element.style.opacity = '0'; // Hides visually but is still focusable if tabindex > -1
-            // Let's stick to aria-hidden and tabindex as per original code, as display/visibility can affect layout
-        } else {
-             // Element already seems restricted, don't store/modify
-             console.log('Skipping element already restricted or hidden by style:', element);
-        }
-      });
-      // Store the map of original states keyed by element reference
-      // Using a Symbol or a less common window property name can help avoid collisions
-      window[Symbol.for('__originalAccessibilityStates')] = originalStates;
-      console.log('Restrictions applied to elements outside the container.', originalStates.size, 'elements modified.');
-    };
-
-    const removeRestrictions = () => {
-      console.log('removeRestrictions called.');
-      const storedStates = window[Symbol.for('__originalAccessibilityStates')]; // Access the stored map
-      if (storedStates instanceof Map && storedStates.size > 0) { // Check if storedStates is a Map and not empty
-        console.log('Restoring accessibility states for', storedStates.size, 'elements.');
-        storedStates.forEach((state, element) => {
-          // Check if the element is still in the DOM before trying to modify it
-          // Use document.body.contains for a more robust check
-          if (document.body.contains(element)) {
-            console.log('Restoring state for:', element, 'Original state:', state);
-            if (state.ariaHidden === null || state.ariaHidden === undefined) { // Check for null or undefined
-              element.removeAttribute('aria-hidden');
-            } else {
-              element.setAttribute('aria-hidden', state.ariaHidden);
-            }
-
-            if (state.tabindex === null || state.tabindex === undefined) { // Check for null or undefined
-              element.removeAttribute('tabindex');
-            } else {
-              element.setAttribute('tabindex', state.tabindex);
-            }
-
-            // Restore inline styles if they were set originally
-            if (state.originalDisplay !== null && state.originalDisplay !== undefined) {
-                element.style.display = state.originalDisplay;
-            } else {
-                element.style.removeProperty('display');
-            }
-            if (state.originalVisibility !== null && state.originalVisibility !== undefined) {
-                 element.style.visibility = state.originalVisibility;
-            } else {
-                 element.style.removeProperty('visibility');
-            }
-             if (state.originalOpacity !== null && state.originalOpacity !== undefined) {
-                 element.style.opacity = state.originalOpacity;
-            } else {
-                 element.style.removeProperty('opacity');
-            }
-
-
-          } else {
-              console.warn('Attempted to restore state for element no longer in DOM:', element);
-          }
-        });
-        // Clear the stored states from the window object after restoring
-        // delete window.__originalAccessibilityStates; // Old method
-        delete window[Symbol.for('__originalAccessibilityStates')]; // New method
-        console.log('Restrictions removed from elements outside the container. Stored states cleared.');
-      } else {
-          console.log('No stored accessibility states to remove.');
-      }
-       // Always reset the map reference or delete the symbol property
-       window[Symbol.for('__originalAccessibilityStates')] = new Map(); // Reset for next use
-    };
-
-
-    // We observe the containerDiv for attribute changes that affect visibility
-    const observer = new MutationObserver((mutationsList, observer) => {
-      console.log('MutationObserver callback fired.', mutationsList);
-      let visibilityMightHaveChanged = false; // Flag to indicate if we should re-check visibility
-
-      for (const mutation of mutationsList) {
-        // Check if the mutation is on the containerDiv and involves attributes OR style changes in subtree
-        if (mutation.target === containerDiv && mutation.type === 'attributes') {
-           console.log('Attributes changed on container div:', mutation.attributeName);
-           // Only set the flag if the changed attribute is potentially related to visibility/display
-           // This is an optimization; observing all attributes is safer if unsure
-           if (['class', 'style'].includes(mutation.attributeName)) {
-             visibilityMightHaveChanged = true;
-           } else {
-             // If a non-style/class attribute changes on the container, we might still want to check
-             // Let's assume any attribute change on the container warrants a visibility check
-             visibilityMightHaveChanged = true;
-           }
-        } else if (containerDiv.contains(mutation.target) && mutation.type === 'attributes' && mutation.attributeName === 'style') {
-            // Also consider style changes on descendants within the container,
-            // although this is less common for the container's overall display
-            console.log('Style attribute changed on descendant within container:', mutation.target);
-            visibilityMightHaveChanged = true;
-        }
-        // Add other conditions if necessary (e.g., subtree: true combined with node removal/addition)
-        // For now, focusing on attribute changes on the container as the primary trigger
-      }
-
-      // After processing all mutations in this batch, check the current computed style if relevant changes occurred
-      if (visibilityMightHaveChanged) {
-           // Use getComputedStyle to get the final, applied styles
-           const computed = window.getComputedStyle(containerDiv);
-           const display = computed.display;
-           const visibility = computed.visibility;
-           const opacity = computed.opacity; // Consider opacity as well
-           console.log('Container div computed style after relevant attribute change:', {display, visibility, opacity});
-
-           // Determine if the element is considered visible based on common properties
-           const isCurrentlyVisible = (display !== 'none' && visibility !== 'hidden' && opacity !== '0');
-
-           // Retrieve the previous state using the data attribute
-           // Initialize to false if the data attribute isn't set yet
-           const wasPreviouslyVisible = containerDiv.dataset.wasVisible === 'true';
-
-
-           console.log('Visibility state:', {isCurrentlyVisible, wasPreviouslyVisible});
-
-           if (isCurrentlyVisible && !wasPreviouslyVisible) {
-             console.log('Container div became visible. Applying restrictions.');
-             applyRestrictions();
-             containerDiv.dataset.wasVisible = 'true'; // Update state
-           } else if (!isCurrentlyVisible && wasPreviouslyVisible) {
-             console.log('Container div became hidden. Removing restrictions.');
-             removeRestrictions();
-             containerDiv.dataset.wasVisible = 'false'; // Update state
-           }
-      }
     });
-
-    // Initial check and setup of the data attribute before starting the observer
-    // Use getComputedStyle for the initial check as well
-    const initialComputed = window.getComputedStyle(containerDiv);
-    const initialDisplay = initialComputed.display;
-    const initialVisibility = initialComputed.visibility;
-    const initialOpacity = initialComputed.opacity;
-    const isInitiallyVisible = (initialDisplay !== 'none' && initialVisibility !== 'hidden' && initialOpacity !== '0');
-    containerDiv.dataset.wasVisible = isInitiallyVisible.toString(); // Initialize state tracking
-    console.log('Initial container div computed style on load:', {initialDisplay, initialVisibility, initialOpacity, isInitiallyVisible});
-
-    if (isInitiallyVisible) {
-      console.log('Container div initially visible. Applying restrictions on load.');
-      applyRestrictions();
-    } else {
-      console.log('Container div not initially visible, restrictions not applied on load.');
-    }
-
-    // Start observing the containerDiv for attribute changes that might affect its visibility
-    // Also observe subtree for style changes on children if needed, but attributes on the container are usually key.
-    console.log('Starting MutationObserver on container div attributes.');
-    observer.observe(containerDiv, { attributes: true, subtree: false }); // Watch for attribute changes on the container itself
-    // If visibility is controlled by a child's style, you might need subtree: true and a more complex check.
-    // For now, assuming container attributes are the primary driver.
-
-
-    // Optional: Clean up observer and event listeners on page unload if this script is dynamically injected
-    // window.addEventListener('beforeunload', () => {
-    //     observer.disconnect();
-    //     if(triggerButton) {
-    //       triggerButton.removeEventListener('click', ...); // You'd need a reference to the function
-    //     }
-    // });
-});
+    
+    // Watch for modal removal from DOM
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.removedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && modalOpen) {
+                    const hasModal = node.classList?.contains('QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_content') ||
+                                   node.querySelector?.('.QSIWebResponsiveDialog-Layout1-SI_8Jna9K5PTcSmf3w_content');
+                    
+                    if (hasModal) {
+                        removeInert();
+                    }
+                }
+            });
+        });
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Handle Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && modalOpen) {
+            removeInert();
+        }
+    });
+    
+})();
+        
     </script>
     <div id='ZN_9BwReAmgWdWatNf'><!--DO NOT REMOVE-CONTENTS PLACED HERE--></div>
 </body>
